@@ -74,7 +74,7 @@ def botrun():
                     botresponse = botresponse[:-1]
             if botresponse[0:2] == ". ":
                 botresponse = botresponse[2:]
-            if botresponse[0] != "I" && botresponse[0:2] != "OK":
+            if botresponse[0] != "I" and botresponse[0:2] != "OK":
                 botresponse = botresponse[0].lower() + botresponse[1:]
             for i in range(2, len(botresponse)):
                 if botresponse[i:i+2] == ". " and i < len(botresponse) - 2 and botresponse[i+2] != "I":
