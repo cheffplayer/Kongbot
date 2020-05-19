@@ -29,7 +29,7 @@ for calibrate in range(0,5):
     ai.send_keys(Keys.ENTER)
 driver.switch_to.window(driver.window_handles[0])
 
-input("Type anything once you have logged in: ")
+input("Press enter once you have logged in.")
 
 usernamesearch = driver.find_element_by_xpath('/html/body/div[5]/div/div[2]/div/ul/li[1]/a/span[2]')
 username = usernamesearch.get_attribute('innerHTML')
