@@ -70,13 +70,12 @@ def botrun():
             responselen = len(botresponse.split())
             lastword = botresponse.split()
             if lastword[responselen - 1][-1:] == ".":
-                if lastword[responselen - 1][-2:] == "..":
-                    botresponse = botresponse
-                else:
+                if lastword[responselen - 1][-2:] != "..":
                     botresponse = botresponse[:-1]
-            else:
-                botresponse = botresponse
-
+            botresponse = botresponse[0].lower() + botresponse[1:]
+            for i in range(2, len(botresponse)):
+                if botresponse[i:i+2] == ". " and i < len(botresponse) - 2:
+                    botresponse = botresponse[0:i+2] + botresponse[i+2].lower() + botresponse[i+3:]
             print("Chat output: ", botresponse)
             driver.switch_to.window(driver.window_handles[0])
 
