@@ -60,7 +60,7 @@ def botrun():
 
             #checks to see if the bot responded. if it didnt, then it recalibrates and outputs a preprogramed response
             try:
-                botresponse = driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[4]/div[2]/div/div['+b+']/div/div/div').get_attribute('innerHTML').replace('<br>', ' ').lower()[:250]
+                botresponse = driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[4]/div[2]/div/div['+b+']/div/div/div').get_attribute('innerHTML').replace('<br>', ' ')[:250]
             except:
                 ai.send_keys("|")
                 ai.send_keys(Keys.ENTER)
@@ -76,6 +76,8 @@ def botrun():
             for i in range(2, len(botresponse)):
                 if botresponse[i:i+2] == ". " and i < len(botresponse) - 2:
                     botresponse = botresponse[0:i+2] + botresponse[i+2].lower() + botresponse[i+3:]
+            if botresponse[0:2] == ". ":
+                botresponse = botresponse[2:]
             print("Chat output: ", botresponse)
             driver.switch_to.window(driver.window_handles[0])
 
