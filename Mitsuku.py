@@ -2,7 +2,6 @@ import time
 from selenium.webdriver.common.keys import Keys
 from selenium import webdriver
 from selenium.webdriver.support import expected_conditions as cond
-from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -24,11 +23,7 @@ time.sleep(1)
 driver.find_element_by_xpath('/html/body/div/div/div/div[2]/div[2]/button').click()
 ai = driver.find_element_by_xpath('/html/body/div[1]/div/div/div/form/div[1]/input')
 time.sleep(3)
-for calibrate in range(0,5):
-    ai.send_keys("|")
-    ai.send_keys(Keys.ENTER)
 driver.switch_to.window(driver.window_handles[0])
-
 input("Press enter once you have logged in.")
 
 usernamesearch = driver.find_element_by_xpath('/html/body/div[5]/div/div[2]/div/ul/li[1]/a/span[2]')
@@ -46,7 +41,6 @@ wait = WebDriverWait(driver, 999999)
 def botrun():
     while True:
         for a in itertools.count(6):
-            b = str(a + 2)
             chatuser = wait.until(ec.visibility_of_element_located((By.XPATH, '/html/body/div[6]/table/tbody/tr/td[2]/div[2]/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div['+str(a)+']/p/span[2]/span'))).get_attribute('innerHTML')
             #if else is to prevent bot from talking to itself
             if chatuser == username:
@@ -61,9 +55,15 @@ def botrun():
                 ai.send_keys(Keys.ENTER)
                 time.sleep(.5)
 
+                global b
+                try:
+                    for b in itertools.count(3):
+                        driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[4]/div[2]/div/div['+str(b)+']/div/div/div')
+                except:
+                    b = b - 1
                 # checks to see if the bot responded. if it didnt, then it recalibrates and outputs a preprogramed response
                 try:
-                    botresponse = driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[4]/div[2]/div/div[' + b + ']/div/div/div').get_attribute('innerHTML').replace('<br>', ' ')[:250]
+                    botresponse = driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[4]/div[2]/div/div['+str(b)+']/div/div/div').get_attribute('innerHTML').replace('<br>', ' ')[:250]
                 except:
                     ai.send_keys("|")
                     ai.send_keys(Keys.ENTER)
@@ -71,6 +71,8 @@ def botrun():
 
                 #if else is to prevent bot from parroting other users
                 if botresponse == listen:
+                    print("Chat output: ", botresponse)
+                    print()
                     driver.switch_to.window(driver.window_handles[0])
                 else:
                     # removes a period if there is less than 2 of them at the end of the message
@@ -79,8 +81,8 @@ def botrun():
                     if lastword[responselen - 1][-1:] == ".":
                         if lastword[responselen - 1][-2:] != "..":
                             botresponse = botresponse[:-1]
-                    if botresponse[0:2] == ". ":
-                        botresponse = botresponse[2:]
+                    if botresponse[0:1] == ".":
+                        botresponse = botresponse[1:]
                     if botresponse[0] != "I" and botresponse[0:2] != "OK":
                         botresponse = botresponse[0].lower() + botresponse[1:]
                     for i in range(2, len(botresponse)):
