@@ -29,24 +29,22 @@ input("Press enter once you have logged in.")
 usernamesearch = driver.find_element_by_xpath('/html/body/div[5]/div/div[2]/div/ul/li[1]/a/span[2]')
 username = usernamesearch.get_attribute('innerHTML')
 
-chat = driver.find_element_by_xpath('/html/body/div[6]/table/tbody/tr/td[2]/div[2]/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[4]/textarea')
-chatroom = driver.find_element_by_xpath('/html/body/div[6]/table/tbody/tr/td[2]/div[2]/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[1]/div[1]/span[1]')
-chatroom.get_attribute('innerHTML')
-print("Connected to", chatroom.get_attribute('innerHTML'))
+wait = WebDriverWait(driver, 999999)
+chat = wait.until(ec.visibility_of_element_located((By.XPATH, '/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[4]/textarea')))
+chatroom = wait.until(ec.visibility_of_element_located((By.XPATH, '/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[1]/div[1]/span[1]'))).get_attribute('innerHTML')
+print("Connected to", chatroom)
 chat.send_keys('https://github.com/cheffplayer/Mitsuku')
 chat.send_keys(Keys.ENTER)
-
-wait = WebDriverWait(driver, 999999)
 
 def botrun():
     while True:
         for a in itertools.count(6):
-            chatuser = wait.until(ec.visibility_of_element_located((By.XPATH, '/html/body/div[6]/table/tbody/tr/td[2]/div[2]/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div['+str(a)+']/p/span[2]/span'))).get_attribute('innerHTML')
+            chatuser = wait.until(ec.visibility_of_element_located((By.XPATH, '/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div['+str(a)+']/p/span[2]/span'))).get_attribute('innerHTML')
             #if else is to prevent bot from talking to itself
             if chatuser == username:
                 pass
             else:
-                listen = driver.find_element_by_xpath('/html/body/div[6]/table/tbody/tr/td[2]/div[2]/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div['+str(a)+']/p/span[3]').get_attribute('innerHTML').replace('<br>', ' ')[:250]
+                listen = wait.until(ec.visibility_of_element_located((By.XPATH, '/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div['+str(a)+']/p/span[3]'))).get_attribute('innerHTML').replace('<br>', ' ')[:250]
                 print(chatuser + ':', listen)
                 driver.switch_to.window(driver.window_handles[1])
 
