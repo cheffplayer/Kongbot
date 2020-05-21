@@ -93,7 +93,11 @@ def botrun():
                 print("Chat output: ", botresponse)
                 driver.switch_to.window(driver.window_handles[0])
 
-                #delays the response based on character length
+                #simulates time to read the chat message
+                readDelay = len(botresponse) / 10
+                time.sleep(readDelay)
+
+                #delays the response based on response character length
                 delayseconds = 2 + len(botresponse) / 8
                 time.sleep(delayseconds)
 
