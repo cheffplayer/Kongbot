@@ -31,8 +31,8 @@ wait = WebDriverWait(driver, 999999)
 chat = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[4]/textarea')))
 chatroom = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[1]/div[1]/span[1]'))).get_attribute('innerHTML')
 print("Connected to", chatroom)
-#chat.send_keys('https://github.com/cheffplayer/Mitsuku')
-#chat.send_keys(Keys.ENTER)
+chat.send_keys('https://github.com/cheffplayer/Mitsuku')
+chat.send_keys(Keys.ENTER)
 
 def botrun():
     while True:
@@ -90,14 +90,14 @@ def botrun():
                 for i in range(2, len(botresponse)):
                     if (botresponse[i:i + 2] == ". " or botresponse[i:i + 2] == "? ") and i < len(botresponse) - 2 and botresponse[i + 2] != "I":
                         botresponse = botresponse[0:i + 2] + botresponse[i + 2].lower() + botresponse[i + 3:]
-                        
+
                 #simulates typos and corrections
                 punctuation = ',.?'
                 outputsplit = botresponse.split()
                 wordint = randint(0, len(outputsplit) - 1)
                 typoword = (outputsplit[wordint]).strip(punctuation)
 
-                if randint(1, 5) == 1:
+                if randint(1, 10) == 1:
                     try:
                         if len(typoword) > 3:
                             decide = 1
@@ -124,7 +124,8 @@ def botrun():
                 try:
                     if decide == 1:
                         time.sleep(2)
-                        chat.send_keys(typoword + '*')
+                        typophrases = [' ', 'oops ', 'i meant ', 'meant to say ', 'sorry']
+                        chat.send_keys(random.choice(typophrases), typoword + '*')
                         chat.send_keys(Keys.ENTER)
                 except:
                     pass
