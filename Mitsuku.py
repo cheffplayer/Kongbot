@@ -111,25 +111,22 @@ def botrun():
                 driver.switch_to.window(driver.window_handles[0])
 
                 #simulates time to read the chat message
-                readDelay = len(botresponse) / 10
-                time.sleep(readDelay)
+                time.sleep(len(botresponse) / 10)
 
                 #delays the response based on response character length
-                delayseconds = 2 + len(botresponse) / 8
-                time.sleep(delayseconds)
+                time.sleep(2 + len(botresponse) / 8)
 
                 #sends message to chat
                 chat.send_keys(botresponse)
                 chat.send_keys(Keys.ENTER)
                 try:
                     if decide == 1:
-                        time.sleep(2)
                         typophrases = [' ', 'oops ', 'i meant ', 'meant to say ', 'sorry']
-                        chat.send_keys(random.choice(typophrases), typoword + '*')
+                        typocorrection = random.choice(typophrases), typoword + '*'
+                        time.sleep(4 + len(typocorrection) / 8)
+                        chat.send_keys(typocorrection)
                         chat.send_keys(Keys.ENTER)
                 except:
                     pass
                 print()
-
-
 botrun()
