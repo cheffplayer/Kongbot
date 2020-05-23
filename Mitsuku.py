@@ -17,10 +17,10 @@ driver.switch_to.window(driver.window_handles[0])
 time.sleep(1)
 driver.get('http://www.kongregate.com/games/UnknownGuardian/game-development-room-gdr?acomplete=gdr')
 driver.switch_to.window(driver.window_handles[1])
-driver.get('http://www.square-bear.co.uk/mitsuku/nfchat.htm')
+driver.get('https://pandorabots.com/mitsuku/')
 time.sleep(1)
-driver.find_element_by_xpath('/html/body/div[1]/div/div/div[2]/div[2]/button').click()
-ai = driver.find_element_by_xpath('/html/body/div[1]/div/div/div/form/div[1]/input')
+driver.find_element_by_xpath('/html/body/div[1]/div/div/div[2]/div/div/div/div[2]/div[2]/button').click()
+ai = driver.find_element_by_xpath('/html/body/div[1]/div/div/div[2]/div/div/div/div/form/div[1]/input')
 time.sleep(3)
 driver.switch_to.window(driver.window_handles[0])
 input("Press enter once you have logged in.")
@@ -31,7 +31,7 @@ wait = WebDriverWait(driver, 999999)
 chat = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[4]/textarea')))
 chatroom = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[1]/div[1]/span[1]'))).get_attribute('innerHTML')
 print("Connected to", chatroom)
-chat.send_keys('https://github.com/cheffplayer/Mitsuku')
+chat.send_keys(username, " has connected to ", chatroom + '!', ' Checkout the code here: https://github.com/cheffplayer/Mitsuku')
 chat.send_keys(Keys.ENTER)
 
 def botrun():
@@ -47,8 +47,7 @@ def botrun():
         if chatuser == username:
             pass
         else:
-            listen = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div[' + str(c) + ']/p/span[3]'))).get_attribute(
-                'innerHTML').replace('<br>', ' ')[:250]
+            listen = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div[' + str(c) + ']/p/span[3]'))).get_attribute('innerHTML').replace('<br>', ' ')[:250]
             print(chatuser + ':', listen)
             driver.switch_to.window(driver.window_handles[1])
 
@@ -60,16 +59,14 @@ def botrun():
             global b
             try:
                 for b in itertools.count(3):
-                    driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[4]/div[2]/div/div[' + str(b) + ']/div/div/div')
+                    driver.find_element_by_xpath('/html/body/div/div/div/div[2]/div/div/div/div/div[4]/div[2]/div/div['+str(b)+']/div/div/div')
             except:
                 b = b - 1
             #checks to see if the bot responded. if it didnt, then it recalibrates and outputs a preprogramed response
             try:
-                botresponse = driver.find_element_by_xpath('/html/body/div[1]/div/div/div/div[4]/div[2]/div/div[' + str(b) + ']/div/div/div').get_attribute('innerHTML').replace('<br>', ' ')[:250]
+                botresponse = driver.find_element_by_xpath('/html/body/div/div/div/div[2]/div/div/div/div/div[4]/div[2]/div/div['+str(b)+']/div/div/div').get_attribute('innerHTML').replace('<br>', ' ')[:250]
             except:
-                ai.send_keys("|")
-                ai.send_keys(Keys.ENTER)
-                botresponse = random.choice(['k', 'ok', 'what?', 'wat', 'sorry?', 'ok then'])
+                pass
 
             #if else is to prevent bot from parroting other users
             if botresponse == listen:
