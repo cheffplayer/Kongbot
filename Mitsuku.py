@@ -104,6 +104,7 @@ def botrun():
                         pass
                 elif randint(1, 10) == 1:
                     try:
+                            decide = 0
                             what = ['waht', 'wat', 'wjat', 'wgat']
                             botresponse = ' '.join([x.replace('what', random.choice(what), 1) for x in outputsplit])
                     except:
