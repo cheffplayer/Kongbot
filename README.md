@@ -16,4 +16,4 @@
 
 ------------
 
-This bot uses the Mitsuku AI to produce automated responses to messages that it recieves in Kongregate chat. It is currently in active development, so expect it to improve in the future.
+This bot uses the Mitsuku AI to produce automated responses to messages that it recieves in Kongregate chat. It also uses methods such as realistic delays between messages, typos, and bad grammar to try to mimic human-behavior.

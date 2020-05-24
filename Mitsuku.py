@@ -99,7 +99,13 @@ def botrun():
                         if len(typoword) > 3:
                             decide = 1
                             typoword2 = typoword[1:]
-                            botresponse = ' '.join([x.replace(typoword, typoword2) for x in outputsplit])
+                            botresponse = ' '.join([x.replace(typoword, typoword2, 1) for x in outputsplit])
+                    except:
+                        pass
+                elif randint(1, 10) == 1:
+                    try:
+                            what = ['waht', 'wat', 'wjat', 'wgat']
+                            botresponse = ' '.join([x.replace('what', random.choice(what), 1) for x in outputsplit])
                     except:
                         pass
                 else:
@@ -116,9 +122,11 @@ def botrun():
                 #sends message to chat
                 chat.send_keys(botresponse)
                 chat.send_keys(Keys.ENTER)
+
+                #sends a typo correction if one was made
                 try:
                     if decide == 1:
-                        typophrases = [' ', 'oops ', 'i meant ', 'meant to say ', 'sorry']
+                        typophrases = [' ', 'oops ', 'i meant ', 'meant to say ', 'sorry ']
                         typocorrection = random.choice(typophrases), typoword + '*'
                         time.sleep(4 + len(typocorrection) / 8)
                         chat.send_keys(typocorrection)
