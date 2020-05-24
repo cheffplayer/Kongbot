@@ -104,13 +104,21 @@ def botrun():
                         pass
                 elif randint(1, 10) == 1:
                     try:
-                            decide = 0
-                            what = ['waht', 'wat', 'wjat', 'wgat']
-                            botresponse = ' '.join([x.replace('what', random.choice(what), 1) for x in outputsplit])
+                        decide = 0
+                        commontypos = {
+                            'what': ['wat', 'wjat', 'waht', 'wgat'],
+                            'your': ['ur', 'yuor', '''you're'''],
+                            'then': ['tehn', 'thne']
+                        }
+                        commontypochoice = random.choice(list(commontypos))
+                        botresponse = ' '.join(
+                            [x.replace(commontypochoice, random.choice(commontypos[commontypochoice]), 1) for x in
+                             outputsplit])
                     except:
                         pass
                 else:
                     decide = 0
+
                 print("Chat output: ", botresponse)
                 driver.switch_to.window(driver.window_handles[0])
 
