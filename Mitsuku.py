@@ -3,33 +3,31 @@ import random
 import time
 from random import randint
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as ec
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.common.by import By
+from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.keys import Keys
 
-ffprofile = webdriver.FirefoxProfile()
-adblockfile = r"D:\Downloads\Trading\Program\trading\adblock_plus-3.8.4-an+fx.xpi"
-driver = webdriver.Firefox(ffprofile)
-driver.install_addon(adblockfile)
-driver.get("http://blank.org/")
-driver.switch_to.window(driver.window_handles[0])
-time.sleep(1)
-driver.get('http://www.kongregate.com/games/UnknownGuardian/game-development-room-gdr?acomplete=gdr')
+options = webdriver.ChromeOptions()
+options.binary_location = "chrome/chrome.exe"
+options.add_experimental_option("excludeSwitches", ["enable-automation"])
+driver = webdriver.Chrome(options=options, executable_path="chromedriver.exe")
+driver.get('https://www.kongregate.com/games/0rava/mutilate-a-doll-2')
+driver.execute_script("window.open('https://pandorabots.com/mitsuku/');")
 driver.switch_to.window(driver.window_handles[1])
-driver.get('https://pandorabots.com/mitsuku/')
-time.sleep(1)
 driver.find_element_by_xpath('/html/body/div[1]/div/div/div[2]/div/div/div/div[2]/div[2]/button').click()
 ai = driver.find_element_by_xpath('/html/body/div[1]/div/div/div[2]/div/div/div/div/form/div[1]/input')
-time.sleep(3)
 driver.switch_to.window(driver.window_handles[0])
 input("Press enter once you have logged in.")
 
 username = driver.find_element_by_xpath('/html/body/div[5]/div/div[2]/div/ul/li[1]/a/span[2]').get_attribute('innerHTML')
-
 wait = WebDriverWait(driver, 999999)
-chat = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[4]/textarea')))
-chatroom = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[1]/div[1]/span[1]'))).get_attribute('innerHTML')
+chat = driver.find_element_by_xpath('/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div[1]/div[1]/div[5]/div[10]/div[2]/div/div[4]/div[1]/textarea')
+chatroom = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div[1]/div[1]/div[5]/div[10]/div[1]/div[1]/span[1]'))).get_attribute('innerHTML')
 print("Connected to", chatroom)
 chat.send_keys(username, " has connected to ", chatroom + '!', ' Checkout the code here: https://github.com/cheffplayer/Mitsuku')
 chat.send_keys(Keys.ENTER)
@@ -39,15 +37,15 @@ def botrun():
         global c, chatuser
         try:
             for c in itertools.count(1):
-                driver.find_element_by_xpath('/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div[' + str(c) + ']/p/span[2]/span')
+                driver.find_element_by_xpath('/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div[1]/div[1]/div[5]/div[10]/div[2]/div/div[3]/div['+str(c)+']/p/span[3]')
         except:
-            chatuser = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div[' + str(c) + ']/p/span[2]/span'))).get_attribute('innerHTML').replace('<br>', ' ')[:250]
+            chatuser = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div[1]/div[1]/div[5]/div[10]/div[2]/div/div[3]/div['+str(c)+']/p/span[2]/span'))).get_attribute('innerHTML').replace('<br>', ' ')[:250]
 
         #if else is to prevent bot from talking to itself
         if chatuser == username:
             pass
         else:
-            listen = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div/div[1]/div[6]/div[10]/div[2]/div[2]/div[3]/div[' + str(c) + ']/p/span[3]'))).get_attribute('innerHTML').replace('<br>', ' ')[:250]
+            listen = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div[1]/div[1]/div[5]/div[10]/div[2]/div/div[3]/div['+str(c)+']/p/span[3]'))).get_attribute('innerHTML').replace('<br>', ' ')[:250]
             print(chatuser + ':', listen)
             driver.switch_to.window(driver.window_handles[1])
 
@@ -94,7 +92,7 @@ def botrun():
                 wordint = randint(0, len(outputsplit) - 1)
                 typoword = (outputsplit[wordint]).strip(punctuation)
 
-                if randint(1, 10) == 1:
+                if randint(1, 15) == 1:
                     try:
                         if len(typoword) > 3:
                             decide = 1
@@ -102,7 +100,7 @@ def botrun():
                             botresponse = ' '.join([x.replace(typoword, typoword2, 1) for x in outputsplit])
                     except:
                         pass
-                elif randint(1, 10) == 1:
+                elif randint(1, 15) == 1:
                     try:
                         decide = 0
                         commontypos = {
