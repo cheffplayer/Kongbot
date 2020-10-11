@@ -1,16 +1,13 @@
 import itertools
-import random
 import time
-from random import randint
+
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
-from selenium.webdriver import Chrome
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.keys import Keys
+
+from processor import *
 
 options = webdriver.ChromeOptions()
 options.binary_location = "chrome/chrome.exe"
@@ -34,7 +31,6 @@ chat.send_keys(Keys.ENTER)
 
 def botrun():
     while True:
-        global c, chatuser
         try:
             for c in itertools.count(1):
                 driver.find_element_by_xpath('/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div[1]/div[1]/div[5]/div[10]/div[2]/div/div[3]/div['+str(c)+']/p/span[3]')
@@ -54,13 +50,12 @@ def botrun():
             ai.send_keys(Keys.ENTER)
             time.sleep(.5)
 
-            global b
             try:
                 for b in itertools.count(3):
                     driver.find_element_by_xpath('/html/body/div/div/div/div[2]/div/div/div/div/div[4]/div[2]/div/div['+str(b)+']/div/div/div')
             except:
                 b = b - 1
-            #checks to see if the bot responded. if it didnt, then it recalibrates and outputs a preprogramed response
+            #checks to see if mitsuku gave a response; goes back to start of loop if not
             try:
                 botresponse = driver.find_element_by_xpath('/html/body/div/div/div/div[2]/div/div/div/div/div[4]/div[2]/div/div['+str(b)+']/div/div/div').get_attribute('innerHTML').replace('<br>', ' ')[:250]
             except:
@@ -72,73 +67,31 @@ def botrun():
                 print()
                 driver.switch_to.window(driver.window_handles[0])
             else:
-                #dumbs the sentence down to be more humanlike
-                responselen = len(botresponse.split())
-                lastword = botresponse.split()
-                if lastword[responselen - 1][-1:] == ".":
-                    if lastword[responselen - 1][-2:] != "..":
-                        botresponse = botresponse[:-1]
-                if botresponse[0:1] == ".":
-                    botresponse = botresponse[1:]
-                if botresponse[0] != "I" and botresponse[0:2] != "OK":
-                    botresponse = botresponse[0].lower() + botresponse[1:]
-                for i in range(2, len(botresponse)):
-                    if (botresponse[i:i + 2] == ". " or botresponse[i:i + 2] == "? ") and i < len(botresponse) - 2 and botresponse[i + 2] != "I":
-                        botresponse = botresponse[0:i + 2] + botresponse[i + 2].lower() + botresponse[i + 3:]
+                mistakes(botresponse)
+                file = open('botresponse.txt', 'r')
+                filelist = file.read().split('\n')
 
-                #simulates typos and corrections
-                punctuation = ',.?'
-                outputsplit = botresponse.split()
-                wordint = randint(0, len(outputsplit) - 1)
-                typoword = (outputsplit[wordint]).strip(punctuation)
-
-                if randint(1, 15) == 1:
-                    try:
-                        if len(typoword) > 3:
-                            decide = 1
-                            typoword2 = typoword[1:]
-                            botresponse = ' '.join([x.replace(typoword, typoword2, 1) for x in outputsplit])
-                    except:
-                        pass
-                elif randint(1, 15) == 1:
-                    try:
-                        decide = 0
-                        commontypos = {
-                            'what': ['wat', 'wjat', 'waht', 'wgat'],
-                            'your': ['ur', 'yuor', '''you're'''],
-                            'then': ['tehn', 'thne']
-                        }
-                        commontypochoice = random.choice(list(commontypos))
-                        botresponse = ' '.join(
-                            [x.replace(commontypochoice, random.choice(commontypos[commontypochoice]), 1) for x in
-                             outputsplit])
-                    except:
-                        pass
-                else:
-                    decide = 0
-
-                print("Chat output: ", botresponse)
+                print("Chat output: ", filelist[0])
                 driver.switch_to.window(driver.window_handles[0])
 
                 #simulates time to read the chat message
-                time.sleep(len(botresponse) / 10)
+                time.sleep(len(filelist[0]) / 10)
 
                 #delays the response based on response character length
-                time.sleep(2 + len(botresponse) / 8)
+                time.sleep(2 + len(filelist[0]) / 8)
 
                 #sends message to chat
-                chat.send_keys(botresponse)
+                chat.send_keys(filelist[0])
                 chat.send_keys(Keys.ENTER)
 
                 #sends a typo correction if one was made
                 try:
-                    if decide == 1:
-                        typophrases = [' ', 'oops ', 'i meant ', 'meant to say ', 'sorry ']
-                        typocorrection = random.choice(typophrases), typoword + '*'
-                        time.sleep(4 + len(typocorrection) / 8)
-                        chat.send_keys(typocorrection)
-                        chat.send_keys(Keys.ENTER)
+                    time.sleep(4 + len(filelist[1]) / 8)
+                    print(filelist[1])
+                    chat.send_keys(filelist[1])
+                    chat.send_keys(Keys.ENTER)
                 except:
                     pass
+
                 print()
 botrun()
