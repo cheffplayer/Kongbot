@@ -26,8 +26,8 @@ wait = WebDriverWait(driver, 999999)
 chat = driver.find_element_by_xpath('/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div[1]/div[1]/div[5]/div[10]/div[2]/div/div[4]/div[1]/textarea')
 chatroom = wait.until(ec.visibility_of_element_located((By.XPATH,'/html/body/div[6]/table/tbody/tr/td[2]/div/div[1]/div[2]/div/div/div/table/tbody/tr[2]/td[2]/div[1]/div[1]/div[5]/div[10]/div[1]/div[1]/span[1]'))).get_attribute('innerHTML')
 print("Connected to", chatroom)
-#chat.send_keys(username, " has connected to ", chatroom + '!', ' Checkout the code here: https://github.com/cheffplayer/Mitsuku')
-#chat.send_keys(Keys.ENTER)
+chat.send_keys(username, " has connected to ", chatroom + '!', ' Checkout the code here: https://github.com/cheffplayer/Mitsuku')
+chat.send_keys(Keys.ENTER)
 
 def botrun():
     while True:
@@ -73,21 +73,21 @@ def botrun():
                 driver.switch_to.window(driver.window_handles[0])
 
                 #simulates time to read the chat message
-                time.sleep(len(botresponse) / 10)
+                time.sleep(len(botresponse) / 11)
 
                 #delays the response based on response character length
-                time.sleep(2 + len(botresponse) / 8)
+                time.sleep(2 + len(botresponse) / 10)
 
                 #sends message to chat
-                #chat.send_keys(botresponse)
-                #chat.send_keys(Keys.ENTER)
+                chat.send_keys(botresponse)
+                chat.send_keys(Keys.ENTER)
 
                 #sends a typo correction if one was made
                 try:
-                    time.sleep(4 + len(botresponse) / 8)
+                    time.sleep(2 + len(botresponse) / 8)
                     print(botresponse)
-                    #chat.send_keys(botresponse)
-                    #chat.send_keys(Keys.ENTER)
+                    chat.send_keys(botresponse)
+                    chat.send_keys(Keys.ENTER)
                 except:
                     pass
 
