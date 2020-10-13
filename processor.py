@@ -56,11 +56,4 @@ def mistakes(botresponse):
     except:
         pass
     #sends processed text to file
-    with open('botresponse.txt', 'w') as file:
-        try:
-            list = botresponse +'\n'+ typocorrection
-            file.write(list)
-            typocorrection = ''
-        except:
-            file.write(botresponse)
-    file.close()
+    return botresponse
