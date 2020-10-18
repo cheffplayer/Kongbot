@@ -2,6 +2,7 @@
 import random
 
 def mistakes(botresponse):
+    package = []
     global typocorrection, decide
     responselen = len(botresponse.split())
     lastword = botresponse.split()
@@ -47,13 +48,15 @@ def mistakes(botresponse):
             pass
     else:
         decide = 0
+    package.append(botresponse)
     # writes a typo correction if one was made
     try:
         if decide == 1:
             typophrases = [' ', 'oops ', 'i meant ', 'meant to say ', 'sorry ']
             typocorrection = random.choice(typophrases) + typoword + '*'
+            package.append(typocorrection)
             decide = 0
     except:
         pass
     #sends processed text to file
-    return botresponse
+    return package

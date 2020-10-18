@@ -69,24 +69,24 @@ def botrun():
             else:
                 botresponse = mistakes(botresponse)
 
-                print("Chat output: ", botresponse)
+                print("Chat output: ", botresponse[0])
                 driver.switch_to.window(driver.window_handles[0])
 
                 #simulates time to read the chat message
-                time.sleep(len(botresponse) / 11)
+                time.sleep(len(botresponse[0]) / 11)
 
                 #delays the response based on response character length
-                time.sleep(2 + len(botresponse) / 10)
+                time.sleep(2 + len(botresponse[0]) / 10)
 
                 #sends message to chat
-                chat.send_keys(botresponse)
+                chat.send_keys(botresponse[0])
                 chat.send_keys(Keys.ENTER)
 
                 #sends a typo correction if one was made
                 try:
-                    time.sleep(2 + len(botresponse) / 8)
-                    print(botresponse)
-                    chat.send_keys(botresponse)
+                    time.sleep(2 + len(botresponse[1]) / 8)
+                    print('Correction: ', botresponse[1])
+                    chat.send_keys(botresponse[1])
                     chat.send_keys(Keys.ENTER)
                 except:
                     pass
