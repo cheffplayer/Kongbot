@@ -10,9 +10,9 @@ from selenium.webdriver.common.keys import Keys
 from processor import *
 
 options = webdriver.ChromeOptions()
-options.binary_location = "chrome/chrome.exe"
+options.binary_location = "chrome/chrome"
 options.add_experimental_option("excludeSwitches", ["enable-automation"])
-driver = webdriver.Chrome(options=options, executable_path="chromedriver.exe")
+driver = webdriver.Chrome(options=options, executable_path="chromedriver")
 driver.get('https://www.kongregate.com/games/0rava/mutilate-a-doll-2')
 driver.execute_script("window.open('https://pandorabots.com/mitsuku/');")
 driver.switch_to.window(driver.window_handles[1])
