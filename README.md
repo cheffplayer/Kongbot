@@ -1,19 +1,17 @@
-# Mitsuku
+# Kongbot
 ## Kongregate chat bot
 
 ------------
 
-## <u>Developers</u>
+## <u>Developer</u>
 [CHEFFPLAYER](https://www.kongregate.com/accounts/cheffplayer "CHEFFPLAYER")
 
-[Apple0726](https://www.kongregate.com/accounts/apple0726 "Apple0726")
 ## <u>Resources</u>
-[Mitsuku](https://pandorabots.com/mitsuku/ "Mitsuku")
-
-[Selenium](https://www.selenium.dev/ "Selenium")
+[EleutherAI](https://6b.eleuther.ai/ "EleutherAI")
 
 [Python](https://www.python.org/ "Python")
 
 ------------
 
-This bot uses the Mitsuku AI to produce automated responses to messages that it recieves in Kongregate chat. It also uses methods such as realistic delays between messages, typos, and bad grammar to try to mimic human-behavior.
+This script opens up a connection with Kongregate's chat websocket and uses EleutherAI to automatically generate responses to chat messages.
+Run main.py to get started!
