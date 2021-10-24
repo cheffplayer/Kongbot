@@ -1,7 +1,7 @@
 # Kongbot
 ## Kongregate chatbot
 This script opens up a connection with Kongregate's chat websocket and uses EleutherAI to automatically generate responses to chat messages. Avoid running it on accounts that you care about, because they risk getting banned if people report you for being a chatbot.
-Euclordion73 is the bot in this example:
+jerome_a2 is the bot in this example:
 ![image](example.png)
 
 ------------
