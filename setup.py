@@ -19,6 +19,9 @@ text can be sent to it per request, so do not set this value too high.
 --inactivity_minutes
 How many minutes of chat inactivity to wait before clearing the memory.
 
+--chat_description
+This gives context to the bot about what it is looking at. Tweaking it will make it might give better results.
+
 """
 '''
 
@@ -27,7 +30,9 @@ How many minutes of chat inactivity to wait before clearing the memory.
         session.post("https://www.kongregate.com/session", data=url)
         data = session.get("http://www.kongregate.com/accounts/status?game_id=287709")
         accountdata = json.loads(data.text)
-        token = str(base64.b64encode((f'{accountdata["chat_username"].lower()}@of1.kongregate.com\u0000{accountdata["chat_username"].lower()}\u0000' + '{' + f'\"k\":\"{accountdata["chat_password"]}\"' + '}').encode("utf-8")), "utf-8")
+        token = str(base64.b64encode((f'{accountdata["chat_username"].lower()}@of1.kongregate.com\u0000'
+                                      f'{accountdata["chat_username"].lower()}\u0000''{'f'\"k\":\"'
+                                      f'{accountdata["chat_password"]}\"''}').encode("utf-8")), "utf-8")
 
         a = "\&quot;"
         configuration = f'''
@@ -36,12 +41,13 @@ How many minutes of chat inactivity to wait before clearing the memory.
 chat_username = '{accountdata["chat_username"]}'
 user_vars_sig = '{accountdata["user_chat_hash"]['user_vars_sig']}'
 user_vars = '{str(accountdata["user_chat_hash"]['user_vars']).replace('"', a)}'
-extra_vars = '{(str(accountdata["user_chat_hash"]['extra_vars'])[:-1] + "'}").replace("'", "&quot;").replace(" ", "&quot;")}'
+extra_vars = '{(str(accountdata["user_chat_hash"]['extra_vars'])[:-1]+"'}").replace("'", "&quot;").replace(" ", "&quot;")}'
 auth_token = '{token}'
 
 ### Bot settings ###
 chat_length = 6
 inactivity_minutes = 5
+chat_description = 'This is a chatroom conversation'
 
 '''
 

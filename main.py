@@ -1,13 +1,16 @@
 from _thread import start_new_thread
 from difflib import SequenceMatcher
-from random import randint
 from re import search, findall
 from time import sleep, strftime
 
 from requests import post
 from websocket import WebSocketApp
 
+from messages import ping, chatsend, connect
 from setup import generate_config
+
+thread_running = 0
+memory = []
 
 while True:
     try:
@@ -19,7 +22,8 @@ while True:
             "vars": config.user_vars,
             "extra": config.extra_vars,
             "chat_length": config.chat_length,
-            "inactivity_minutes": config.inactivity_minutes
+            "inactivity_minutes": config.inactivity_minutes,
+            "chat_description": config.chat_description
         }
     except:
         print("No config file detected. Please enter your Kongregate account details...")
@@ -30,95 +34,121 @@ while True:
 def timestamp():
     return strftime("[%I:%M %p] ")
 
-def chatsend(send):
-    wsapp.send(f"<message to='287709-ngu-idle-1@conference.of1.kongregate.com' from='{cfg['username'].lower()}@of1.kongregate.com/xiff' type='groupchat' id='02826d44-fc2d-4ddf-885d-339c6e1709ea' xmlns='jabber:client'><body>{str(send)}</body><x xmlns='jabber:x:event'><composing/></x></message>")
-
-def ping():
-    wsapp.send("<iq type='get' id='32a9b0a3-1d77-4b12-8965-fc809bdb340f:ping' xmlns='jabber:client'><ping xmlns='urn:xmpp:ping'/></iq>")
-
 def compare(string1, string2):
     return SequenceMatcher(a=string1, b=string2).ratio()
 
+class PrintMessage:
+    @staticmethod
+    def chat(username, contents):
+        #blue, white, highlight
+        colors = [';36m', ';97m', '46;97m']
+        i = 0 if username == cfg['username'] else 1
+        username = f'\033[1{colors[i]}{username}: \033[0{colors[i]}'
+        contents_split = contents.split()
+        for i2 in range(len(contents_split)):
+            if compare(contents_split[i2].lower(), cfg['username'].lower()) > 0.58\
+                    or contents_split[i2].lower() == "bot":
+                    contents_split[i2] = f'\033[{colors[2]}{contents_split[i2]}\033[0{colors[i]}'
+        contents = " ".join(contents_split)
+        print(timestamp() + username + contents + '\033[m')
+
+    status_strings = [
+        f"{cfg['username']} has connected",
+        "Chat inactivity... (clearing memory)",
+        "Connection dropped. Reconnecting..."
+    ]
+
+    def status(self, i):
+        print(f"\n{timestamp()}\u001B[1;34m{self.status_strings[i]}\n\u001B[m")
+PrintMessage = PrintMessage()
+
 def sendrequest(history):
-    lines = ["This is a chatroom conversation\n"]
-    for i in range(0, len(history), 2):
-        lines.append(f"{timestamp()}{history[i]}: {history[i + 1]}\n")
-    lines.append(f"{timestamp()}{cfg['username']}:")
-    package = ("".join(lines))
-    while True:
+    lines = [f"{cfg['chat_description']}\n\n"]
+    for i in range(0, len(history), 2): lines.append(f"{history[i]}: {history[i + 1]}\n")
+    lines.append(f"{cfg['username']}:")
+    package = "".join(lines)
+    response = post("https://api.eleuther.ai/completion", json={
+        "context": package,
+        "topP": 0.9,
+        "temp": 1.5,
+        "response_length": 40,
+        "remove_input": True}, )
+    if response.status_code == 200:
+        return parse(response.text.encode('ascii', errors="ignore").decode('unicode_escape'))
+
+def parse(r):
+    first_response = findall(r'":"(.*?)\n', r)[0].strip()
+    usernames = findall(r'\n(.*?):', r)
+    messages = findall(r': (.*?)\n', r)
+    for i in range(len(usernames)):
+        if usernames[i] != cfg['username']:
+            messages = messages[:i]
+            messages.insert(0, first_response)
+            break
+    if messages:
         try:
-            r = post("https://api.eleuther.ai/completion", json={
-                "context": package,
-                "topP": 0.9,
-                "temp": 1.5,
-                "response_length": 40,
-                "remove_input": True}, )
-            response = search(r':"(.*?)\\', r.text).group(1).strip()
-            cont1 = findall(r'] (.*?):', r.text)[0]
-            cont2 = findall(r': (.*?)\\', r.text)[0]
-            return response, cont1, cont2
-        except: continue
+            if compare(messages[0], messages[1]) > 0.8: messages = messages[0]
+        except: pass
+        return messages
 
-def connect():
-    wsapp.send("<open xmlns='urn:ietf:params:xml:ns:xmpp-framing' to='of1.kongregate.com' version='1.0'/>")
-    wsapp.send(f"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl' mechanism='PLAIN'>{cfg['token']}</auth>")
-    wsapp.send("<iq type='set' id='_bind_auth_2' xmlns='jabber:client'><bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'><resource>xiff</resource></bind></iq>")
-    wsapp.send("<iq type='set' id='_session_auth_2' xmlns='jabber:client'><session xmlns='urn:ietf:params:xml:ns:xmpp-session'/></iq>")
-    wsapp.send("<presence xmlns='jabber:client'><show>chat</show></presence>")
-    wsapp.send(f"<presence from='{cfg['username'].lower()}@of1.kongregate.com/xiff' to='287709-ngu-idle-1@conference.of1.kongregate.com/{cfg['username']}' xmlns='jabber:client'><x xmlns='http://jabber.org/protocol/muc'><history seconds='60'/></x><status>[&quot;{cfg['sig']}&quot;,&quot;{cfg['vars']}&quot;,{cfg['extra']}]</status></presence>")
-
-
-history = []
-responses = ["0"]
 def on_message(wsapp, message):
     #print(message)
     if "<message to" in message:
         username = findall('/([^"]*)"', message)[1]
         contents = search('<body>(.*)</body>', message).group(1)
-        if username != cfg['username']:
-            print(timestamp() + '\033[1;37m' + username + '\033[0;0m' + ": " + contents)
-        else:
-            print(timestamp() + '\033[1;36m' + username + '\033[0;36m' + ": " + contents + '\033[0;0m')
-        if contents[0:8] == ":sticker": contents = "sticker"
-        history.append(username)
-        history.append(contents)
-    elif "</stream:stream>" in message: print(f"\n{timestamp()}\u001B[1;34mConnection dropped\u001B[0;0m\n")
+        PrintMessage.chat(username, contents)
+        if contents[0:8] == ":sticker": contents = findall(r'e":"(.*?)"}', contents)[0]
+        memory.extend([username, contents])
+    elif "</stream:stream>" in message: PrintMessage.status(2); initialize()
 
-def run(*args):
+def read_chat():
+    global thread_running
+    thread_running = 1
     i = 0
-    i2 = 0
-    while True:
-        length = len(history)
-        sleep(1)
-        if len(history) == length:
-            i2 += 1
-            if i2 == cfg['inactivity_minutes'] * 60:
-                history.clear()
-                print(f"{timestamp()}\u001B[1;34mChat inactivity... (clearing memory)\u001B[0;0m")
-        else: i2 = 0
-        if len(history) > cfg['chat_length']: history.clear()
-        if len(history) >= 2 and history[-2] != cfg['username']:
-            response, cont1, cont2 = sendrequest(history)
-            responses.append(response)
-            if compare(responses[-1], history[-1]) > 0.8: continue
-            elif compare(responses[-1], responses[-2]) > 0.8: continue
-            elif responses[-1] == "": continue
-            else:
-                chatsend(responses[-1])
-                if (cont1 == cfg['username'] and
-                    randint(0, 1) == 1 and
-                    compare(responses[-1], cont2) < 0.8): chatsend(cont2)
-        i += 1
-        if i == 30:
-            ping()
+    try:
+        previous_response = ''
+        while True:
+            current_message = len(memory)
+            while current_message == len(memory):
+                i += 1
+                sleep(1)
+                if i % 60 == 0: ping(wsapp)
+                if i == cfg['inactivity_minutes'] * 60 and not memory:
+                    del memory[:len(memory)-2]
+                    PrintMessage.status(1)
             i = 0
 
+            if memory[-2] != cfg['username']:
+                while True:
+                    responses = sendrequest(memory)
+                    if responses is None:
+                        sleep(5)
+                        continue
+                    break
+                if (compare(responses[0], memory[-1]) < 0.8 and
+                    compare(previous_response, responses[-1]) < 0.8):
+                    for i2 in range(len(responses)): chatsend(wsapp, cfg, responses[i2]); sleep(1)
+                    previous_response = responses[-1]
+                    if len(memory) > cfg['chat_length']: del memory[:len(memory)-2]
+    except Exception as error:
+        # debugging purposes
+        print(f"{type(error).__name__} at line {error.__traceback__.tb_lineno}: {error}")
+        #print("responses: ", responses)
+        #print("memory: ", memory)
+        thread_running = 0
+        initialize()
+
 def on_open(wsapp):
-    connect()
-    print(f"\n{timestamp()}\u001B[1;34m{cfg['username']} has connected\n\u001B[0;0m")
-    start_new_thread(run, ())
+    connect(wsapp, cfg)
+    PrintMessage.status(0)
+
+def initialize():
+    global thread_running
+    if thread_running == 0: start_new_thread(read_chat, ())
+    wsapp.close()
+    wsapp.run_forever()
 
 wsapp = WebSocketApp("wss://chat-proxy.kongregate.com/?sid=c10a854d-9e88-42e7-acd6-4f64a894a318&svid=747c5705-f640-48f2-9be0-03f0d6d3fe51&wsr=false&wss=false&ca=0&wc=0&bc=0&tc=0&sr=0&ss=0&pb=true",
                      on_message=on_message,
                      on_open=on_open)
-wsapp.run_forever()
+initialize()
