@@ -15,6 +15,7 @@ memory = []
 while True:
     try:
         import config
+
         cfg = {
             "username": config.chat_username,
             "token": config.auth_token,
@@ -31,9 +32,6 @@ while True:
         continue
     break
 
-def timestamp():
-    return strftime("[%I:%M %p] ")
-
 def compare(string1, string2):
     return SequenceMatcher(a=string1, b=string2).ratio()
 
@@ -44,13 +42,14 @@ class PrintMessage:
         colors = [';36m', ';97m', '46;97m']
         i = 0 if username == cfg['username'] else 1
         username = f'\033[1{colors[i]}{username}: \033[0{colors[i]}'
-        contents_split = contents.split()
-        for i2 in range(len(contents_split)):
-            if compare(contents_split[i2].lower(), cfg['username'].lower()) > 0.58\
-                    or contents_split[i2].lower() == "bot":
-                    contents_split[i2] = f'\033[{colors[2]}{contents_split[i2]}\033[0{colors[i]}'
-        contents = " ".join(contents_split)
-        print(timestamp() + username + contents + '\033[m')
+        contents_split = []
+        for i2, word in enumerate(contents.split()):
+            if (compare(word.lower(), cfg['username'].lower()) > 0.58
+                    or word.lower() == "bot"):
+                word = f'\033[{colors[2]}{word}\033[0{colors[i]}'
+            contents_split += f"{word} "
+        contents = "".join(contents_split)
+        print(f"{strftime('[%I:%M %p]')} {username}{contents}\033[m")
 
     status_strings = [
         f"{cfg['username']} has connected",
@@ -59,62 +58,66 @@ class PrintMessage:
     ]
 
     def status(self, i):
-        print(f"\n{timestamp()}\u001B[1;34m{self.status_strings[i]}\n\u001B[m")
+        print(f"\n{strftime('[%I:%M %p]')} \u001B[1;34m{self.status_strings[i]}\n\u001B[m")
 PrintMessage = PrintMessage()
 
 def sendrequest(history):
     lines = [f"{cfg['chat_description']}\n\n"]
-    for i in range(0, len(history), 2): lines.append(f"{history[i]}: {history[i + 1]}\n")
+    for i in range(0, len(history), 2):
+        lines.append(f"{history[i]}: {history[i + 1]}\n")
     lines.append(f"{cfg['username']}:")
     package = "".join(lines)
     response = post("https://api.eleuther.ai/completion", json={
         "context": package,
         "topP": 0.9,
-        "temp": 1.5,
+        "temp": 0.7,
         "response_length": 40,
         "remove_input": True}, )
-    if response.status_code == 200:
-        return parse(response.text.encode('ascii', errors="ignore").decode('unicode_escape'))
+    if response.status_code != 200:
+        return None
+    return parse(f"{cfg['username']}:{response.text[20:][:-3]}"
+                 .encode('ascii', errors="ignore")
+                 .decode('unicode_escape'))
 
 def parse(r):
-    first_response = findall(r'":"(.*?)\n', r)[0].strip()
-    usernames = findall(r'\n(.*?):', r)
-    messages = findall(r': (.*?)\n', r)
-    for i in range(len(usernames)):
-        if usernames[i] != cfg['username']:
-            messages = messages[:i]
-            messages.insert(0, first_response)
+    posts = findall(r'(.*?)\n', r.replace("\n\n", "\n"))
+    final_posts = []
+    for post in enumerate(posts):
+        username = post[1].split()[0][:-1].lower()
+        message = ' '.join(post[1].split()[1:])
+        if username != cfg['username'].lower():
             break
-    if messages:
-        try:
-            if compare(messages[0], messages[1]) > 0.8: messages = messages[0]
-        except: pass
-        return messages
+        final_posts += [message]
+        if len(final_posts) > 1 and compare(final_posts[0], final_posts[1]) > 0.80:
+            final_posts = [final_posts[0]]
+    return final_posts
 
 def on_message(wsapp, message):
-    #print(message)
     if "<message to" in message:
         username = findall('/([^"]*)"', message)[1]
         contents = search('<body>(.*)</body>', message).group(1)
         PrintMessage.chat(username, contents)
-        if contents[0:8] == ":sticker": contents = findall(r'e":"(.*?)"}', contents)[0]
+        if contents[0:8] == ":sticker":
+            contents = findall(r'e":"(.*?)"}', contents)[0]
         memory.extend([username, contents])
-    elif "</stream:stream>" in message: PrintMessage.status(2); initialize()
+    elif "</stream:stream>" in message:
+        PrintMessage.status(2)
+        initialize()
 
 def read_chat():
     global thread_running
     thread_running = 1
     i = 0
     try:
-        previous_response = ''
         while True:
             current_message = len(memory)
             while current_message == len(memory):
                 i += 1
                 sleep(1)
-                if i % 60 == 0: ping(wsapp)
+                if i % 60 == 0:
+                    ping(wsapp)
                 if i == cfg['inactivity_minutes'] * 60 and not memory:
-                    del memory[:len(memory)-2]
+                    del memory[:len(memory) - 2]
                     PrintMessage.status(1)
             i = 0
 
@@ -125,11 +128,12 @@ def read_chat():
                         sleep(5)
                         continue
                     break
-                if (compare(responses[0], memory[-1]) < 0.8 and
-                    compare(previous_response, responses[-1]) < 0.8):
-                    for i2 in range(len(responses)): chatsend(wsapp, cfg, responses[i2]); sleep(1)
-                    previous_response = responses[-1]
-                    if len(memory) > cfg['chat_length']: del memory[:len(memory)-2]
+                if compare(memory[-1], responses[0]) < 0.8:
+                    for response in enumerate(responses):
+                        chatsend(wsapp, cfg, response[1])
+                        sleep(1)
+                    if len(memory) > cfg['chat_length']:
+                        del memory[:len(memory) - 2]
     except Exception as error:
         # debugging purposes
         print(f"{type(error).__name__} at line {error.__traceback__.tb_lineno}: {error}")
@@ -144,7 +148,8 @@ def on_open(wsapp):
 
 def initialize():
     global thread_running
-    if thread_running == 0: start_new_thread(read_chat, ())
+    if thread_running == 0:
+        start_new_thread(read_chat, ())
     wsapp.close()
     wsapp.run_forever()
 
