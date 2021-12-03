@@ -45,7 +45,7 @@ class PrintMessage:
         contents_split = []
         for i2, word in enumerate(contents.split()):
             if (compare(word.lower(), cfg['username'].lower()) > 0.58
-                    or word.lower() == "bot"):
+                or word.lower() == "bot"):
                 word = f'\033[{colors[2]}{word}\033[0{colors[i]}'
             contents_split += f"{word} "
         contents = "".join(contents_split)
@@ -111,6 +111,7 @@ def read_chat():
     try:
         while True:
             current_message = len(memory)
+            previous_responses = ""
             while current_message == len(memory):
                 i += 1
                 sleep(1)
@@ -128,7 +129,9 @@ def read_chat():
                         sleep(5)
                         continue
                     break
-                if compare(memory[-1], responses[0]) < 0.8:
+                if (compare(previous_responses, "".join(responses)) < 0.8
+                    and compare(memory[-1], responses[0]) < 0.8):
+                    previous_responses = "".join(responses)
                     for response in enumerate(responses):
                         chatsend(wsapp, cfg, response[1])
                         sleep(1)
