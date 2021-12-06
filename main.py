@@ -43,7 +43,7 @@ class PrintMessage:
         i = 0 if username == cfg['username'] else 1
         username = f'\033[1{colors[i]}{username}: \033[0{colors[i]}'
         contents_split = []
-        for i2, word in enumerate(contents.split()):
+        for word in contents.split():
             if (compare(word.lower(), cfg['username'].lower()) > 0.58
                 or word.lower() == "bot"):
                 word = f'\033[{colors[2]}{word}\033[0{colors[i]}'
@@ -51,14 +51,17 @@ class PrintMessage:
         contents = "".join(contents_split)
         print(f"{strftime('[%I:%M %p]')} {username}{contents}\033[m")
 
-    status_strings = [
-        f"{cfg['username']} has connected",
-        "Chat inactivity... (clearing memory)",
-        "Connection dropped. Reconnecting..."
-    ]
-
-    def status(self, i):
-        print(f"\n{strftime('[%I:%M %p]')} \u001B[1;34m{self.status_strings[i]}\n\u001B[m")
+    def status(self, i, *args):
+        status_strings = [
+            f"{cfg['username']} has connected",
+            "Chat inactivity... (clearing memory)",
+            "Connection dropped. Reconnecting...",
+            f"""Reply is too similar to a previous message.
+                Current: {args[0]}
+                Previous: {args[1]}""",
+            f"EleutherAI sent code {args[0]}. Trying again..."
+        ]
+        print(f"\n{strftime('[%I:%M %p]')} \u001B[1;34m{status_strings[i]}\n\u001B[m")
 PrintMessage = PrintMessage()
 
 def sendrequest(history):
@@ -70,10 +73,11 @@ def sendrequest(history):
     response = post("https://api.eleuther.ai/completion", json={
         "context": package,
         "topP": 0.9,
-        "temp": 0.7,
+        "temp": 0.9,
         "response_length": 40,
         "remove_input": True}, )
     if response.status_code != 200:
+        PrintMessage.status(4, response.status_code, None)
         return None
     return parse(f"{cfg['username']}:{response.text[20:][:-3]}"
                  .encode('ascii', errors="ignore")
@@ -97,21 +101,31 @@ def on_message(wsapp, message):
         username = findall('/([^"]*)"', message)[1]
         contents = search('<body>(.*)</body>', message).group(1)
         PrintMessage.chat(username, contents)
-        if contents[0:8] == ":sticker":
+        if contents[:8] == ":sticker":
             contents = findall(r'e":"(.*?)"}', contents)[0]
         memory.extend([username, contents])
     elif "</stream:stream>" in message:
-        PrintMessage.status(2)
+        PrintMessage.status(2, None, None)
         initialize()
+
+def spam_test(previous, current, replying_to):
+    previous.extend(replying_to)
+    for x in enumerate(current):
+        for y in enumerate(previous):
+            if compare(x[1], y[1]) < 0.8:
+                continue
+            PrintMessage.status(3, x[1], y[1])
+            return False
+    return True
 
 def read_chat():
     global thread_running
     thread_running = 1
     i = 0
     try:
+        previous_responses = [""]
         while True:
             current_message = len(memory)
-            previous_responses = ""
             while current_message == len(memory):
                 i += 1
                 sleep(1)
@@ -119,22 +133,21 @@ def read_chat():
                     ping(wsapp)
                 if i == cfg['inactivity_minutes'] * 60 and not memory:
                     del memory[:len(memory) - 2]
-                    PrintMessage.status(1)
+                    PrintMessage.status(1, None, None)
             i = 0
 
             if memory[-2] != cfg['username']:
                 while True:
-                    responses = sendrequest(memory)
-                    if responses is None:
-                        sleep(5)
+                    current_responses = sendrequest(memory)
+                    if current_responses is None:
+                        sleep(3)
                         continue
                     break
-                if (compare(previous_responses, "".join(responses)) < 0.8
-                    and compare(memory[-1], responses[0]) < 0.8):
-                    previous_responses = "".join(responses)
-                    for response in enumerate(responses):
-                        chatsend(wsapp, cfg, response[1])
-                        sleep(1)
+                if spam_test(previous_responses, current_responses, memory[-1]):
+                    previous_responses = current_responses
+                    for respond in enumerate(current_responses):
+                        chatsend(wsapp, cfg, respond[1])
+                        sleep(2 + len(respond[1]) / 10)
                     if len(memory) > cfg['chat_length']:
                         del memory[:len(memory) - 2]
     except Exception as error:
@@ -147,7 +160,7 @@ def read_chat():
 
 def on_open(wsapp):
     connect(wsapp, cfg)
-    PrintMessage.status(0)
+    PrintMessage.status(0, None, None)
 
 def initialize():
     global thread_running

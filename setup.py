@@ -47,7 +47,7 @@ auth_token = '{token}'
 ### Bot settings ###
 chat_length = 6
 inactivity_minutes = 5
-chat_description = 'This is a chatroom conversation'
+chat_description = '{accountdata["chat_username"]} is a roleplayer.'
 
 '''
 
