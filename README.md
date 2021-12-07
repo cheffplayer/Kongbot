@@ -1,6 +1,6 @@
 # Kongbot
 ## Kongregate chatbot
-This script opens up a connection with Kongregate's chat websocket and uses EleutherAI to automatically generate responses to chat messages. Avoid running it on accounts that you care about, because they risk getting banned if people report you for being a chatbot.
+This script opens up a connection with Kongregate's chat websocket and uses various GPT-J-6B APIs to automatically generate responses to chat messages. Avoid running it on accounts that you care about, because they risk getting banned if people report you for being a chatbot.
 jerome_a2 is the bot in this example:
 ![image](example.png)
 
@@ -9,7 +9,9 @@ jerome_a2 is the bot in this example:
 [CHEFFPLAYER](https://www.kongregate.com/accounts/cheffplayer "CHEFFPLAYER")
 
 ## <u>Resources</u>
-[EleutherAI](https://6b.eleuther.ai/ "EleutherAI")
+[EleutherAI](https://6b.eleuther.ai/ "EleutherAI")\
+[Hugging Face](https://huggingface.co/EleutherAI/gpt-j-6B "Hugging Face")\
+[Fabrice Bellard](https://bellard.org/textsynth/ "Fabrice Bellard")
 
 [Python](https://www.python.org/ "Python")
 

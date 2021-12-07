@@ -45,7 +45,7 @@ class PrintMessage:
         contents_split = []
         for word in contents.split():
             if (compare(word.lower(), cfg['username'].lower()) > 0.58
-                or word.lower() == "bot"):
+                    or word.lower() == "bot"):
                 word = f'\033[{colors[2]}{word}\033[0{colors[i]}'
             contents_split += f"{word} "
         contents = "".join(contents_split)
@@ -59,9 +59,10 @@ class PrintMessage:
             f"""Reply is too similar to a previous message.
                 Current: {args[0]}
                 Previous: {args[1]}""",
-            f"EleutherAI sent code {args[0]}. Trying again..."
+            f"{args[0]} sent code {args[1]}."
         ]
-        print(f"\n{strftime('[%I:%M %p]')} \u001B[1;34m{status_strings[i]}\n\u001B[m")
+        print(f"{strftime('[%I:%M %p]')} \u001B[1;34m{status_strings[i]}\u001B[m")
+
 PrintMessage = PrintMessage()
 
 def sendrequest(history):
@@ -70,21 +71,55 @@ def sendrequest(history):
         lines.append(f"{history[i]}: {history[i + 1]}\n")
     lines.append(f"{cfg['username']}:")
     package = "".join(lines)
-    response = post("https://api.eleuther.ai/completion", json={
-        "context": package,
-        "topP": 0.9,
-        "temp": 0.9,
-        "response_length": 40,
-        "remove_input": True}, )
-    if response.status_code != 200:
-        PrintMessage.status(4, response.status_code, None)
-        return None
-    return parse(f"{cfg['username']}:{response.text[20:][:-3]}"
-                 .encode('ascii', errors="ignore")
-                 .decode('unicode_escape'))
+    request_data = {
+        0: {
+            "name": "api.eleuther.ai",
+            "url": "https://api.eleuther.ai/completion",
+            "json": {
+                "context": package,
+                "topP": 0.9,
+                "temp": 0.9,
+                "response_length": 40,
+                "remove_input": True,
+            }
+        },
+        1: {
+            "name": "api-inference.huggingface.co",
+            "url": "https://api-inference.huggingface.co/models/EleutherAI/gpt-j-6B",
+            "json": {
+                "inputs": package,
+                "parameters": {
+                    "use_cache": False,
+                    "top_p": 0.9,
+                    "temperature": 0.9,
+                    "max_new_tokens": 40,
+                    "return_full_text": False}
+            }
+        },
+        2: {
+            "name": "bellard.org",
+            "url": "https://bellard.org/textsynth/api/v1/engines/gptj_6B/completions",
+            "json": {
+                "prompt": package,
+                "temperature": 0.9,
+                "top_k": 40,
+                "top_p": 0.9,
+                "seed": 0,
+                "stream": False}
+        }
+    }
+    for key, value in request_data.items():
+        response = post(value["url"], json=value["json"])
+        if response.status_code == 200:
+            return parse(response)
+        PrintMessage.status(4, value["name"], response.status_code)
+    return None
 
-def parse(r):
-    posts = findall(r'(.*?)\n', r.replace("\n\n", "\n"))
+def parse(response):
+    cleaned_response = (f"""{cfg['username']}:{response.text.split('"')[1::2][1]}"""
+                        .encode('ascii', errors="ignore")
+                        .decode('unicode_escape', errors="ignore"))
+    posts = findall(r'(.*?)\n', cleaned_response.replace("\n\n", "\n"))
     final_posts = []
     for post in enumerate(posts):
         username = post[1].split()[0][:-1].lower()
@@ -92,7 +127,7 @@ def parse(r):
         if username != cfg['username'].lower():
             break
         final_posts += [message]
-        if len(final_posts) > 1 and compare(final_posts[0], final_posts[1]) > 0.80:
+        if len(final_posts) > 1 and compare(final_posts[0], final_posts[1]) > 0.75:
             final_posts = [final_posts[0]]
     return final_posts
 
@@ -112,7 +147,7 @@ def spam_test(previous, current, replying_to):
     previous.extend(replying_to)
     for x in enumerate(current):
         for y in enumerate(previous):
-            if compare(x[1], y[1]) < 0.8:
+            if compare(x[1], y[1]) < 0.75:
                 continue
             PrintMessage.status(3, x[1], y[1])
             return False
@@ -140,7 +175,7 @@ def read_chat():
                 while True:
                     current_responses = sendrequest(memory)
                     if current_responses is None:
-                        sleep(3)
+                        sleep(5)
                         continue
                     break
                 if spam_test(previous_responses, current_responses, memory[-1]):
