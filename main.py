@@ -2,6 +2,7 @@ from _thread import start_new_thread
 from difflib import SequenceMatcher
 from re import search, findall
 from time import sleep, strftime
+from string import punctuation
 
 from requests import post
 from websocket import WebSocketApp
@@ -43,17 +44,20 @@ class PrintMessage:
         i = 0 if username == cfg['username'] else 1
         username = f'\033[1{colors[i]}{username}: \033[0{colors[i]}'
         contents_split = []
+        highlight_words = [cfg['username'].lower(), "bot", "robot", "chatbot"]
         for word in contents.split():
-            if (compare(word.lower(), cfg['username'].lower()) > 0.58
-                    or word.lower() == "bot"):
-                word = f'\033[{colors[2]}{word}\033[0{colors[i]}'
+            removed_punctuation = word.translate(str.maketrans('', '', punctuation))
+            removed_punctuation = removed_punctuation.lower()
+            for check in highlight_words:
+                if compare(check, removed_punctuation) > 0.58:
+                    word = f'\033[{colors[2]}{word}\033[0{colors[i]}'
             contents_split += f"{word} "
         contents = "".join(contents_split)
         print(f"{strftime('[%I:%M %p]')} {username}{contents}\033[m")
 
     def status(self, i, *args):
         status_strings = [
-            f"{cfg['username']} has connected",
+            f"\n{cfg['username']} has connected\n",
             "Chat inactivity... (clearing memory)",
             "Connection dropped. Reconnecting...",
             f"""Reply is too similar to a previous message.
@@ -62,7 +66,6 @@ class PrintMessage:
             f"{args[0]} sent code {args[1]}."
         ]
         print(f"{strftime('[%I:%M %p]')} \u001B[1;34m{status_strings[i]}\u001B[m")
-
 PrintMessage = PrintMessage()
 
 def sendrequest(history):
