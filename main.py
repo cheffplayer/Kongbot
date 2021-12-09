@@ -46,16 +46,17 @@ class PrintMessage:
         contents_split = []
         highlight_words = [cfg['username'].lower(), "bot", "robot", "chatbot"]
         for word in contents.split():
-            removed_punctuation = word.translate(str.maketrans('', '', punctuation))
-            removed_punctuation = removed_punctuation.lower()
+            normalized = word.translate(str.maketrans('', '', punctuation))
+            normalized = normalized.lower()
             for check in highlight_words:
-                if compare(check, removed_punctuation) > 0.58:
+                if compare(check, normalized) > 0.58:
                     word = f'\033[{colors[2]}{word}\033[0{colors[i]}'
             contents_split += f"{word} "
         contents = "".join(contents_split)
         print(f"{strftime('[%I:%M %p]')} {username}{contents}\033[m")
 
-    def status(self, i, *args):
+    @staticmethod
+    def status(i, *args):
         status_strings = [
             f"\n{cfg['username']} has connected\n",
             "Chat inactivity... (clearing memory)",
