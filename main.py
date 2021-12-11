@@ -49,7 +49,7 @@ class PrintMessage:
             normalized = word.translate(str.maketrans('', '', punctuation))
             normalized = normalized.lower()
             for check in highlight_words:
-                if compare(check, normalized) > 0.58:
+                if compare(check, normalized) > 0.75:
                     word = f'\033[{colors[2]}{word}\033[0{colors[i]}'
             contents_split += f"{word} "
         contents = "".join(contents_split)
@@ -58,13 +58,14 @@ class PrintMessage:
     @staticmethod
     def status(i, *args):
         status_strings = [
-            f"\n{cfg['username']} has connected\n",
+            f"{cfg['username']} has connected\n",
             "Chat inactivity... (clearing memory)",
             "Connection dropped. Reconnecting...",
             f"""Reply is too similar to a previous message.
                 Current: {args[0]}
                 Previous: {args[1]}""",
-            f"{args[0]} sent code {args[1]}."
+            f"{args[0]} sent code {args[1]}.",
+            f"{cfg['username']} is banned."
         ]
         print(f"{strftime('[%I:%M %p]')} \u001B[1;34m{status_strings[i]}\u001B[m")
 PrintMessage = PrintMessage()
@@ -146,6 +147,10 @@ def on_message(wsapp, message):
     elif "</stream:stream>" in message:
         PrintMessage.status(2, None, None)
         initialize()
+    elif "<not-authorized" in message:
+        PrintMessage.status(5, None, None)
+        wsapp.close()
+
 
 def spam_test(previous, current, replying_to):
     previous.extend(replying_to)
