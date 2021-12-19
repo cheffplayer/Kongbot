@@ -1,17 +1,19 @@
-from _thread import start_new_thread
+from threading import Thread
 from difflib import SequenceMatcher
 from re import search, findall
-from time import sleep, strftime
+from time import sleep, strftime, mktime
 from string import punctuation
+from json import dumps, loads
+from base64 import b64decode
+from datetime import datetime
 
-from requests import post
+from requests import Session
 from websocket import WebSocketApp
 
 from messages import ping, chatsend, connect
 from setup import generate_config
 
-thread_running = 0
-memory = []
+session = Session()
 
 while True:
     try:
@@ -23,7 +25,8 @@ while True:
             "sig": config.user_vars_sig,
             "vars": config.user_vars,
             "extra": config.extra_vars,
-            "chat_length": config.chat_length,
+            "cookie": config.cookie,
+            "spam_detection": config.spam_detection,
             "inactivity_minutes": config.inactivity_minutes,
             "chat_description": config.chat_description
         }
@@ -33,18 +36,166 @@ while True:
         continue
     break
 
-def compare(string1, string2):
-    return SequenceMatcher(a=string1, b=string2).ratio()
+class GPT:
+    processing = False
+
+    def __init__(self, chat_input):
+        self.chat_input = chat_input
+        self.packaged_input = self.package(chat_input)
+        self.apis = {
+            0: {
+                "name": "api.eleuther.ai",
+                "url": "https://api.eleuther.ai/completion",
+                "json": {
+                    "context": self.packaged_input,
+                    "topP": 0.9,
+                    "temp": 0.9,
+                    "response_length": 40,
+                    "remove_input": True,
+                }
+            },
+            1: {
+                "name": "api-inference.huggingface.co",
+                "url": "https://api-inference.huggingface.co/models/EleutherAI/gpt-j-6B",
+                "json": {
+                    "inputs": self.packaged_input,
+                    "parameters": {
+                        "use_cache": False,
+                        "top_p": 0.9,
+                        "temperature": 0.9,
+                        "max_new_tokens": 40,
+                        "return_full_text": False}
+                }
+            },
+            2: {
+                "name": "bellard.org",
+                "url": "https://bellard.org/textsynth/api/v1/engines/gptj_6B/completions",
+                "json": {
+                    "prompt": self.packaged_input,
+                    "temperature": 0.9,
+                    "top_k": 40,
+                    "top_p": 0.9,
+                    "seed": 0,
+                    "stream": False}
+            }
+        }
+
+    def package(self, history):
+        self.processing = True
+        lines = [f"{cfg['chat_description']}\n\n"]
+        for message in enumerate(history):
+            lines.append(f"{message[1]}\n")
+        lines.append(f"{cfg['username']}:")
+        return "".join(lines)
+
+    def send_to_api(self):
+        for key, value in self.apis.items():
+            try:
+                response = session.post(value["url"], json=value["json"], timeout=20)
+                if response.status_code == 200:
+                    return response.text
+            except:
+                PrintMessage.status(3, value["name"], None)
+
+    def process_response(self, response):
+        cleaned_response = (f"""{cfg['username']}:{response.split('"')[1::2][1]}"""
+                            .encode('ascii', errors="ignore")
+                            .decode('unicode_escape', errors="ignore"))
+        posts = findall(r'(.*?)\n', cleaned_response.replace("\n\n", "\n"))
+        final_posts = []
+        for post in enumerate(posts):
+            username = post[1].split()[0][:-1].lower()
+            message = ' '.join(post[1].split()[1:])
+            if username != cfg['username'].lower():
+                break
+            final_posts += [message]
+            if len(final_posts) > 1 and compare(final_posts[0], final_posts[1]) > 0.75:
+                final_posts = [final_posts[0]]
+        self.processing = False
+        return final_posts
+
+    def spam_test(self, replies):
+        history = [
+            message.partition(' ')[2]
+            for message in reversed(self.chat_input[:cfg['spam_detection']])
+        ]
+        for x in replies:
+            for y in history:
+                if compare(x, y) > 0.75:
+                    PrintMessage.status(2, x, y)
+                    return False
+        return True
+
+
+class BotMemory:
+    memory = {}
+    silenced = (False, 0)
+
+    def __init__(self, username, message):
+        if username == cfg["username"]:
+            return
+        if username not in list(self.memory.keys()):
+            profile = {
+                f"{username}": {
+                    "muted": False,
+                    "posts": 0,
+                    "last_post_time": 0,
+                    "inactive": False,
+                    "history": {}
+                }
+            }
+            self.memory.update(profile)
+        self.user = self.memory[username]
+        self.username = username
+        if not self.is_muted():
+            profile_page = session.get(f"https://www.kongregate.com/accounts/{username}", cookies=cfg["cookie"])
+            if "has muted you" in profile_page.text:
+                self.mute()
+                PrintMessage.status(5, username, None)
+            self.user["posts"] += 1
+            self.post_id = f"post_{self.user['posts']}"
+            self.user["history"][self.post_id] = {"message": message, "reply": None}
+            self.user["last_post_time"] = int(strftime("%s"))
+            self.user["inactive"] = False
+        else:
+            self.user["inactive"] = True
+            self.user["posts"] = 0
+            self.user["history"] = {}
+
+    def parse_history(self):
+        constructed = []
+        for value in self.user["history"].items():
+            constructed.append(f"{self.username}: {value[1]['message']}")
+            if value[1]['reply']:
+                replies = [f"{cfg['username']}: {reply}" for reply in value[1]['reply']]
+                constructed.extend(replies)
+        return constructed
+
+    def reply(self, reply):
+        self.user["history"][self.post_id]["reply"] = reply
+
+    def mute(self):
+        self.user["muted"] = True
+
+    def is_muted(self):
+        return self.user["muted"]
+
 
 class PrintMessage:
+
     @staticmethod
-    def chat(username, contents):
-        #blue, white, highlight
-        colors = [';36m', ';97m', '46;97m']
-        i = 0 if username == cfg['username'] else 1
+    def chat(username, contents, bot):
+        #blue, white, highlight, faint
+        colors = [';36m', ';97m', '46;97m', ';90m']
+        if username == cfg['username']:
+            i = 0
+        elif bot.is_muted():
+            i = 3
+        else:
+            i = 1
         username = f'\033[1{colors[i]}{username}: \033[0{colors[i]}'
         contents_split = []
-        highlight_words = [cfg['username'].lower(), "bot", "robot", "chatbot"]
+        highlight_words = [cfg['username'].lower(), "bot", "robot", "chatbot", "mute", "report"]
         for word in contents.split():
             normalized = word.translate(str.maketrans('', '', punctuation))
             normalized = normalized.lower()
@@ -59,159 +210,100 @@ class PrintMessage:
     def status(i, *args):
         status_strings = [
             f"{cfg['username']} has connected\n",
-            "Chat inactivity... (clearing memory)",
             "Connection dropped. Reconnecting...",
             f"""Reply is too similar to a previous message.
                 Current: {args[0]}
                 Previous: {args[1]}""",
-            f"{args[0]} sent code {args[1]}.",
-            f"{cfg['username']} is banned."
+            f"{args[0]} took too long to respond.",
+            f"{cfg['username']} is banned.",
+            f"{args[0]} has muted you.",
+            f"Clearing memory for {args[0]} (inactivity).",
+            f"{cfg['username']} got silenced for {args[0]} minutes.",
+            f"{cfg['username']} is no longer silenced."
         ]
         print(f"{strftime('[%I:%M %p]')} \u001B[1;34m{status_strings[i]}\u001B[m")
+
 PrintMessage = PrintMessage()
 
-def sendrequest(history):
-    lines = [f"{cfg['chat_description']}\n\n"]
-    for i in range(0, len(history), 2):
-        lines.append(f"{history[i]}: {history[i + 1]}\n")
-    lines.append(f"{cfg['username']}:")
-    package = "".join(lines)
-    request_data = {
-        0: {
-            "name": "api.eleuther.ai",
-            "url": "https://api.eleuther.ai/completion",
-            "json": {
-                "context": package,
-                "topP": 0.9,
-                "temp": 0.9,
-                "response_length": 40,
-                "remove_input": True,
-            }
-        },
-        1: {
-            "name": "api-inference.huggingface.co",
-            "url": "https://api-inference.huggingface.co/models/EleutherAI/gpt-j-6B",
-            "json": {
-                "inputs": package,
-                "parameters": {
-                    "use_cache": False,
-                    "top_p": 0.9,
-                    "temperature": 0.9,
-                    "max_new_tokens": 40,
-                    "return_full_text": False}
-            }
-        },
-        2: {
-            "name": "bellard.org",
-            "url": "https://bellard.org/textsynth/api/v1/engines/gptj_6B/completions",
-            "json": {
-                "prompt": package,
-                "temperature": 0.9,
-                "top_k": 40,
-                "top_p": 0.9,
-                "seed": 0,
-                "stream": False}
-        }
-    }
-    for key, value in request_data.items():
-        response = post(value["url"], json=value["json"])
-        if response.status_code == 200:
-            return parse(response)
-        PrintMessage.status(4, value["name"], response.status_code)
-    return None
-
-def parse(response):
-    cleaned_response = (f"""{cfg['username']}:{response.text.split('"')[1::2][1]}"""
-                        .encode('ascii', errors="ignore")
-                        .decode('unicode_escape', errors="ignore"))
-    posts = findall(r'(.*?)\n', cleaned_response.replace("\n\n", "\n"))
-    final_posts = []
-    for post in enumerate(posts):
-        username = post[1].split()[0][:-1].lower()
-        message = ' '.join(post[1].split()[1:])
-        if username != cfg['username'].lower():
-            break
-        final_posts += [message]
-        if len(final_posts) > 1 and compare(final_posts[0], final_posts[1]) > 0.75:
-            final_posts = [final_posts[0]]
-    return final_posts
+def compare(string1, string2):
+    return SequenceMatcher(a=string1, b=string2).ratio()
 
 def on_message(wsapp, message):
-    if "<message to" in message:
+    if (
+        BotMemory.silenced[0] is True
+        and int((BotMemory.silenced[1] - int(strftime("%s"))) / 60) < 0
+    ):
+        BotMemory.silenced = (False, 0)
+        PrintMessage.status(8, None, None)
+
+    for key, value in BotMemory.memory.items():
+        if (
+            value["inactive"] is False
+            and (int(strftime("%s")) - value["last_post_time"]) / 60 > cfg["inactivity_minutes"]
+        ):
+            PrintMessage.status(6, key, None)
+            BotMemory.memory[key]["inactive"] = True
+            BotMemory.memory[key]["history"] = {}
+            BotMemory.memory[key]["posts"] = 0
+
+    if "<message to" in message:  # chat message
+        ping(wsapp)
         username = findall('/([^"]*)"', message)[1]
         contents = search('<body>(.*)</body>', message).group(1)
-        PrintMessage.chat(username, contents)
         if contents[:8] == ":sticker":
             contents = findall(r'e":"(.*?)"}', contents)[0]
-        memory.extend([username, contents])
-    elif "</stream:stream>" in message:
-        PrintMessage.status(2, None, None)
+        bot = BotMemory(username, contents)
+        PrintMessage.chat(username, contents, bot)
+        chat = bot.parse_history()
+        if (
+            username != cfg['username']
+            and bot.is_muted() is False
+            and GPT.processing is False
+            and BotMemory.silenced[0] is False
+        ):
+            GPT.processing = True
+            Thread(target=read_chat, args=(chat, bot), daemon=True).start()
+    elif "admin@of1.kongregate.com/server" in message:  # silenced
+        encoded_time = search('<msg opcode="silenced">(.*)</msg>', message).group(1)
+        decoded_time = loads(str(b64decode(encoded_time), "utf-8"))
+        reformated_time = datetime.strptime(decoded_time['scheduled_end'], "%d %b %Y %H:%M:%S %z")
+        struct_time = reformated_time.timetuple()
+        silenced_until = int(mktime(struct_time))
+        BotMemory.silenced = (True, silenced_until)
+        PrintMessage.status(7, int((silenced_until - int(strftime("%s"))) / 60), None)
+    elif "</stream:stream>" in message:  # disconnected
+        PrintMessage.status(1, None, None)
         initialize()
-    elif "<not-authorized" in message:
-        PrintMessage.status(5, None, None)
+    elif "<not-authorized" in message:  # banned
+        PrintMessage.status(4, None, None)
         wsapp.close()
 
-
-def spam_test(previous, current, replying_to):
-    previous.extend(replying_to)
-    for x in enumerate(current):
-        for y in enumerate(previous):
-            if compare(x[1], y[1]) < 0.75:
-                continue
-            PrintMessage.status(3, x[1], y[1])
-            return False
-    return True
-
-def read_chat():
-    global thread_running
-    thread_running = 1
-    i = 0
-    try:
-        previous_responses = [""]
+def read_chat(chat, bot):
+    with open('memory.json', 'w') as memory:
+        gpt = GPT(chat)
         while True:
-            current_message = len(memory)
-            while current_message == len(memory):
-                i += 1
-                sleep(1)
-                if i % 60 == 0:
-                    ping(wsapp)
-                if i == cfg['inactivity_minutes'] * 60 and not memory:
-                    del memory[:len(memory) - 2]
-                    PrintMessage.status(1, None, None)
-            i = 0
-
-            if memory[-2] != cfg['username']:
-                while True:
-                    current_responses = sendrequest(memory)
-                    if current_responses is None:
-                        sleep(5)
-                        continue
-                    break
-                if spam_test(previous_responses, current_responses, memory[-1]):
-                    previous_responses = current_responses
-                    for respond in enumerate(current_responses):
-                        chatsend(wsapp, cfg, respond[1])
-                        sleep(2 + len(respond[1]) / 10)
-                    if len(memory) > cfg['chat_length']:
-                        del memory[:len(memory) - 2]
-    except Exception as error:
-        # debugging purposes
-        print(f"{type(error).__name__} at line {error.__traceback__.tb_lineno}: {error}")
-        #print("responses: ", responses)
-        #print("memory: ", memory)
-        thread_running = 0
-        initialize()
+            response = gpt.send_to_api()
+            if response is None:
+                continue
+            bot_replies = gpt.process_response(response)
+            if gpt.spam_test(bot_replies) is True:
+                break
+        for message in bot_replies:
+            bot.reply(bot_replies)
+            sleep(2 + len(message) / 10)
+            chatsend(wsapp, cfg, message)
+        memory.write(dumps(BotMemory.memory, indent=4))
+    memory.close()
+    GPT.processing = False
 
 def on_open(wsapp):
     connect(wsapp, cfg)
     PrintMessage.status(0, None, None)
 
 def initialize():
-    global thread_running
-    if thread_running == 0:
-        start_new_thread(read_chat, ())
     wsapp.close()
     wsapp.run_forever()
+
 
 wsapp = WebSocketApp("wss://chat-proxy.kongregate.com/?sid=c10a854d-9e88-42e7-acd6-4f64a894a318&svid=747c5705-f640-48f2-9be0-03f0d6d3fe51&wsr=false&wss=false&ca=0&wc=0&bc=0&tc=0&sr=0&ss=0&pb=true",
                      on_message=on_message,

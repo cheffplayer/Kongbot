@@ -12,9 +12,8 @@ def generate_config():
 ! Do not edit the general account data, or you will be unable to connect to chat !
 
 ### Bot settings ###
---chat_length
-How many chat messages to remember before clearing the memory. The eleuther.ai API has a limit to how much
-text can be sent to it per request, so do not set this value too high.
+--spam_detection
+How many messages to check back on to see if the bot is repeating itself, or the person that is being replied to.
 
 --inactivity_minutes
 How many minutes of chat inactivity to wait before clearing the memory.
@@ -43,9 +42,10 @@ user_vars_sig = '{accountdata["user_chat_hash"]['user_vars_sig']}'
 user_vars = '{str(accountdata["user_chat_hash"]['user_vars']).replace('"', a)}'
 extra_vars = '{(str(accountdata["user_chat_hash"]['extra_vars'])[:-1]+"'}").replace("'", "&quot;").replace(" ", "&quot;")}'
 auth_token = '{token}'
+cookie = {session.cookies.get_dict()}
 
 ### Bot settings ###
-chat_length = 6
+spam_detection = 5
 inactivity_minutes = 5
 chat_description = '{accountdata["chat_username"]} is a roleplayer.'
 
