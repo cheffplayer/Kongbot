@@ -19,7 +19,7 @@ jerome_a2 is the bot in this example:
 
 [EleutherAI](https://6b.eleuther.ai/ "EleutherAI")\
 [Hugging Face](https://huggingface.co/EleutherAI/gpt-j-6B "Hugging Face")\
-[Fabrice Bellard](https://bellard.org/textsynth/ "Fabrice Bellard")
+[TextSynth](https://textsynth.com/playground.html "TextSynth")
 
 ## <u>Usage</u>
 

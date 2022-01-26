@@ -46,6 +46,7 @@ class GPT:
             0: {
                 "name": "api.eleuther.ai",
                 "url": "https://api.eleuther.ai/completion",
+                "header": None,
                 "json": {
                     "context": self.packaged_input,
                     "topP": 0.9,
@@ -57,6 +58,7 @@ class GPT:
             1: {
                 "name": "api-inference.huggingface.co",
                 "url": "https://api-inference.huggingface.co/models/EleutherAI/gpt-j-6B",
+                "header": None,
                 "json": {
                     "inputs": self.packaged_input,
                     "parameters": {
@@ -68,15 +70,17 @@ class GPT:
                 }
             },
             2: {
-                "name": "bellard.org",
-                "url": "https://bellard.org/textsynth/api/v1/engines/gptj_6B/completions",
+                "name": "api.textsynth.com",
+                "url": "https://api.textsynth.com/v1/engines/gptj_6B/completions",
+                "header": {"Authorization": "Bearer 842a11464f81fc8be43ac76fb36426d2"},
                 "json": {
                     "prompt": self.packaged_input,
                     "temperature": 0.9,
                     "top_k": 40,
                     "top_p": 0.9,
-                    "seed": 0,
-                    "stream": False}
+                    "max_tokens": 40,
+                    "stream": False,
+                    "stop": None}
             }
         }
 
@@ -91,16 +95,18 @@ class GPT:
     def send_to_api(self):
         for key, value in self.apis.items():
             try:
-                response = session.post(value["url"], json=value["json"], timeout=20)
+                response = session.post(value["url"], headers=value["header"], json=value["json"], timeout=20)
                 if response.status_code == 200:
                     return response.text
             except:
                 PrintMessage.status(3, value["name"], None)
 
     def process_response(self, response):
-        cleaned_response = (f"""{cfg['username']}:{response.split('"')[1::2][1]}"""
-                            .encode('ascii', errors="ignore")
-                            .decode('unicode_escape', errors="ignore"))
+        text_keys = ["generated_text", "text"]
+        response = loads(response)
+        if type(response) is list:
+            response = response[0]
+        cleaned_response = f"{cfg['username']}:{[response[key] for key in text_keys if key in response][0]}"
         posts = findall(r'(.*?)\n', cleaned_response.replace("\n\n", "\n"))
         final_posts = []
         for post in enumerate(posts):
